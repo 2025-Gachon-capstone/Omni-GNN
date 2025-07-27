@@ -96,7 +96,7 @@ def feature_bucketization(user2seq):
     return user2seq
 
 def main():
-    input_path = os.path.join(args.data_dir, "master_dataset_with_roles.csv")
+    input_path = os.path.join(args.data_dir, "master_dataset_with_roles_final.csv")
     df = pd.read_csv(input_path)
 
     # 필터링: 학습에 사용할 prior만

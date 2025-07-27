@@ -26,7 +26,7 @@ class InstacartTrainer(nn.Module):
 
     def calculate_loss(self, batch):
         _, input_ids, reordered, hour, aisle, dept, count, input_mask, labels, positions = batch
-        input_ids, reordered, hour, aisle, dept, count, input_mask, labels = [x.to(self.device) for x in (input_ids, reordered, hour, aisle, dept, count, input_mask, labels)]
+        input_ids, reordered, hour, aisle, dept, count, input_mask, labels, positions = [x.to(self.device) for x in (input_ids, reordered, hour, aisle, dept, count, input_mask, labels, positions)]
 
         h = self.model(input_ids, reordered, hour, aisle, dept, count, positions)
         input_tensor = self.dense(h)
