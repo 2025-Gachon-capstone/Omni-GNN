@@ -14,7 +14,7 @@ parser.add_argument('--vocab_filename', type=str, default='vocab', help='vocab f
 ################
 # Trainer
 ################
-parser.add_argument('--device', type=str, default='cpu', choices=['cpu', 'cuda'])
+parser.add_argument('--device', type=str, default='cuda', choices=['cpu', 'cuda'])
 parser.add_argument('--optimizer', type=str, default='Adam', choices=['SGD', 'Adam'])
 parser.add_argument('--lr', type=float, default=1e-4, help='Learning rate')
 parser.add_argument('--num_train_steps', default=1000000)
@@ -51,7 +51,10 @@ def set_template(args):
     args.initializer_range = 0.02
     args.num_hidden_layers = 8
     args.num_attention_heads = 2
-    args.vocab_size = 3000000
+    args.product_size = 49662
+    args.user_size = 204808
+    args.vocab_size = args.product_size + args.user_size + 3 # product_id 49685개 + 스페셜 토큰 3개 + user: 204808
+
     args.max_seq_length = 100
     args.hidden_dropout_prob = 0.2
     args.attention_probs_dropout_prob = 0.2

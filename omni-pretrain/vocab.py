@@ -10,7 +10,7 @@ class FreqVocab:
 
     def update(self, user2seq):
         for user_id, seq in user2seq.items():
-            self.counter[f"[USR_{user_id}]"] = len(seq)
+            self.counter[f"[USR_{user_id}]"] = 0
             self.counter.update([t["product_id"] for t in seq])
 
     def generate_vocab(self):
@@ -18,17 +18,24 @@ class FreqVocab:
         self.special_tokens = ["[MASK]", "[pad]", "[NO_USE]"]
         self.token_to_ids = {}
 
-        # assign special tokens first
+        # 1. assign special tokens first
         for token in self.special_tokens:
             self.token_to_ids[token] = len(self.token_to_ids) + 1
 
-        # assign remaining tokens
+        # 2. Assign [USR_xxx] tokens next
+        user_tokens = sorted([t for t in self.counter if str(t).startswith("[USR_")])
+        for token in user_tokens:
+            self.token_to_ids[token] = len(self.token_to_ids) + 1
+
+        # 3. assign remaining tokens
         for token, _ in self.counter.most_common():
             if token not in self.token_to_ids:
                 self.token_to_ids[token] = len(self.token_to_ids) + 1
 
-        # ensure special tokens have zero count
+        # 4. Ensure special/user tokens have zero count
         for token in self.special_tokens:
+            self.counter[token] = 0
+        for token in user_tokens:
             self.counter[token] = 0
 
         self.id_to_tokens = {v: k for k, v in self.token_to_ids.items()}

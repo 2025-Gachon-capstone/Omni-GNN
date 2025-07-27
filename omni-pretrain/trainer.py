@@ -21,13 +21,13 @@ class InstacartTrainer(nn.Module):
         self.dense = nn.Linear(args.hidden_size, args.hidden_size).to(self.device)
         self.LayerNorm = nn.LayerNorm(args.hidden_size, eps=1e-12).to(self.device)
 
-        word_num = len(vocab.vocab_words) - 3
+        word_num = len(vocab.vocab_words) - self.args.user_size - 3
         if args.neg_strategy == "uniform":
             self.weights = torch.ones(word_num)
         elif args.neg_strategy == "zip": # Log-uniform (Zipfian) negative sampling
             self.weights = 1 / torch.arange(1., word_num + 1)
         elif args.neg_strategy == "freq": # Frequency-based negative sampling
-            self.weights = torch.tensor(list(map(lambda x: pow(x, 1 / 1), vocab.frequency[4:])), dtype=torch.float)
+            self.weights = torch.tensor(list(map(lambda x: pow(x, 1 / 1), vocab.frequency[self.args.user_size + 3:])), dtype=torch.float)
         else:
             raise ValueError("Please select correct negative sampling strategy: uniform, zip, freq.")
 
@@ -44,8 +44,24 @@ class InstacartTrainer(nn.Module):
         labels = torch.where(label_mask, labels, torch.zeros_like(labels))
 
         pos_embed = self.model.embedding.token_embed(labels)
+
+        # 체크포인트 1: weight 길이
+        assert len(self.weights) == self.args.product_size, f"Mismatch! weights: {len(self.weights)}, expected: {self.args.product_size}"
+
+        # 체크포인트 2: negative index 유효성
         neg_ids = torch.multinomial(self.weights, self.args.neg_sample_num, replacement=False).to(self.device)
-        neg_embed = self.model.embedding.token_embed(neg_ids+3)
+        assert (neg_ids < self.args.product_size).all()
+
+        # 최종 ID
+        neg_embed_ids = neg_ids + self.args.user_size + 3
+
+        # 체크포인트 3: vocab 범위 초과 확인
+        assert neg_embed_ids.max().item() < self.args.vocab_size
+
+        # 임베딩
+        neg_embed = self.model.embedding.token_embed(neg_embed_ids)
+
+
 
         pos_logits = torch.sum(input_tensor * pos_embed, dim=-1).unsqueeze(-1)
         neg_logits = torch.matmul(input_tensor, neg_embed.t())
@@ -61,12 +77,16 @@ class InstacartTrainer(nn.Module):
         self.best_loss = float('inf')  # 가장 낮은 loss를 저장
 
         for epoch in range(self.num_epochs):
-            accum_step = self.train_one_epoch(epoch, accum_step)
-            if (epoch + 1) % 5 == 0 or epoch == 0:
-                self.save_model(epoch + 1, self.args.ckpt_dir)
+            epoch_loss, accum_step = self.train_one_epoch(epoch, accum_step)
+            if epoch_loss < self.best_loss:
+                self.best_loss = epoch_loss
+                self.save_model(epoch + 1, self.args.ckpt_dir, epoch_loss)
 
     def train_one_epoch(self, epoch, accum_step):
         self.model.train()
+        total_loss = 0.0
+        total_steps = 0
+
         for batch_idx, batch in enumerate(tqdm(self.data_loader)):
             self.optimizer.zero_grad()
             loss = self.calculate_loss(batch)
@@ -76,15 +96,16 @@ class InstacartTrainer(nn.Module):
             if self.args.enable_lr_schedule:
                 self.lr_scheduler.step()
 
-            accum_step += 1
             loss_value = loss.item()
-            tqdm.write(f"Epoch {epoch + 1}, Step {accum_step}, Loss {loss.item():.4f}")
+            total_loss += loss_value
+            total_steps += 1
+            accum_step += 1
 
-            # 저장 조건: 이전보다 loss가 낮아졌을 때만 저장
-        if loss_value < self.best_loss:
-            self.best_loss = loss_value
-            self.save_model(epoch + 1, self.args.ckpt_dir, loss_value)
-        return accum_step
+            tqdm.write(f"Epoch {epoch + 1}, Step {accum_step}, Loss {loss_value:.4f}")
+
+        epoch_loss = total_loss / total_steps
+        return epoch_loss, accum_step   
+
 
     def save_model(self, epoch, ckpt_dir, loss_value):
         os.makedirs(ckpt_dir, exist_ok=True)
