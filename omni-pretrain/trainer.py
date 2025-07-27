@@ -22,13 +22,20 @@ class InstacartTrainer(nn.Module):
         self.LayerNorm = nn.LayerNorm(args.hidden_size, eps=1e-12).to(self.device)
 
         word_num = len(vocab.vocab_words) - 3
-        self.weights = torch.ones(word_num)
+        if args.neg_strategy == "uniform":
+            self.weights = torch.ones(word_num)
+        elif args.neg_strategy == "zip": # Log-uniform (Zipfian) negative sampling
+            self.weights = 1 / torch.arange(1., word_num + 1)
+        elif args.neg_strategy == "freq": # Frequency-based negative sampling
+            self.weights = torch.tensor(list(map(lambda x: pow(x, 1 / 1), vocab.frequency[4:])), dtype=torch.float)
+        else:
+            raise ValueError("Please select correct negative sampling strategy: uniform, zip, freq.")
 
     def calculate_loss(self, batch):
-        _, input_ids, reordered, hour, aisle, dept, count, input_mask, labels, positions = batch
-        input_ids, reordered, hour, aisle, dept, count, input_mask, labels, positions = [x.to(self.device) for x in (input_ids, reordered, hour, aisle, dept, count, input_mask, labels, positions)]
+        _, input_ids, reordered, hour, aisle, dept, count_bucket, input_mask, labels, positions = batch
+        input_ids, reordered, hour, aisle, dept, count_bucket, input_mask, labels, positions = [x.to(self.device) for x in (input_ids, reordered, hour, aisle, dept, count_bucket, input_mask, labels, positions)]
 
-        h = self.model(input_ids, reordered, hour, aisle, dept, count, positions)
+        h = self.model(input_ids, reordered, hour, aisle, dept, count_bucket, positions)
         input_tensor = self.dense(h)
         input_tensor = F.gelu(input_tensor)
         input_tensor = self.LayerNorm(input_tensor)
@@ -38,7 +45,7 @@ class InstacartTrainer(nn.Module):
 
         pos_embed = self.model.embedding.token_embed(labels)
         neg_ids = torch.multinomial(self.weights, self.args.neg_sample_num, replacement=False).to(self.device)
-        neg_embed = self.model.embedding.token_embed(neg_ids)
+        neg_embed = self.model.embedding.token_embed(neg_ids+3)
 
         pos_logits = torch.sum(input_tensor * pos_embed, dim=-1).unsqueeze(-1)
         neg_logits = torch.matmul(input_tensor, neg_embed.t())
@@ -51,6 +58,8 @@ class InstacartTrainer(nn.Module):
 
     def train(self):
         accum_step = 0
+        self.best_loss = float('inf')  # 가장 낮은 loss를 저장
+
         for epoch in range(self.num_epochs):
             accum_step = self.train_one_epoch(epoch, accum_step)
             if (epoch + 1) % 5 == 0 or epoch == 0:
@@ -68,14 +77,26 @@ class InstacartTrainer(nn.Module):
                 self.lr_scheduler.step()
 
             accum_step += 1
+            loss_value = loss.item()
             tqdm.write(f"Epoch {epoch + 1}, Step {accum_step}, Loss {loss.item():.4f}")
+
+            # 저장 조건: 이전보다 loss가 낮아졌을 때만 저장
+        if loss_value < self.best_loss:
+            self.best_loss = loss_value
+            self.save_model(epoch + 1, self.args.ckpt_dir, loss_value)
         return accum_step
 
-    def save_model(self, epoch, ckpt_dir):
+    def save_model(self, epoch, ckpt_dir, loss_value):
         os.makedirs(ckpt_dir, exist_ok=True)
         ckpt_path = os.path.join(ckpt_dir, f"epoch_{epoch}.pth")
         torch.save(self.model.state_dict(), ckpt_path)
-        print(f"Model saved to {ckpt_path}")
+
+        # 텍스트 로그로 loss 저장
+        log_path = os.path.join(ckpt_dir, "loss_log.txt")
+        with open(log_path, "a") as f:
+            f.write(f"Epoch {epoch}, Loss {loss_value:.4f}\n")
+
+        print(f"Model saved to {ckpt_path} with Loss {loss_value:.4f}")
 
     def _create_optimizer(self):
         optimizer = AdamW(self.model.parameters(), lr=self.args.lr, weight_decay=0.01)

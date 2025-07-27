@@ -106,17 +106,17 @@ class InstacartEmbedding(nn.Module):
         self.hour_embed = TokenEmbedding(25, args.hidden_size)
         self.aisle_embed = TokenEmbedding(args.aisle_size, args.hidden_size)
         self.dept_embed = TokenEmbedding(args.dept_size, args.hidden_size)
-        self.count_embed = TokenEmbedding(args.count_bucket_size, args.hidden_size)
+        self.count_bucket_embed = TokenEmbedding(args.count_bucket_size, args.hidden_size)
         self.position_embed = TokenEmbedding(args.max_seq_length, args.hidden_size)
         self.dropout = nn.Dropout(p=args.hidden_dropout_prob)
 
-    def forward(self, input_ids, reordered, hour, aisle, dept, count, positions):
+    def forward(self, input_ids, reordered, hour, aisle, dept, count_bucket, positions):
         x = self.token_embed(input_ids)
         x += self.reordered_embed(reordered)
         x += self.hour_embed(hour)
         x += self.aisle_embed(aisle)
         x += self.dept_embed(dept)
-        x += self.count_embed(count)
+        x += self.count_bucket_embed(count_bucket)
         x += self.position_embed(positions)
         return self.dropout(x)
 
@@ -130,10 +130,10 @@ class InstacartBERT(nn.Module):
             for _ in range(args.num_hidden_layers)
         ])
 
-    def forward(self, input_ids, reordered, hour, aisle, dept, count, positions):
+    def forward(self, input_ids, reordered, hour, aisle, dept, count_bucket, positions):
 
         mask = (input_ids > 0).unsqueeze(1).repeat(1, input_ids.size(1), 1).unsqueeze(1)
-        x = self.embedding(input_ids, reordered, hour, aisle, dept, count, positions)
+        x = self.embedding(input_ids, reordered, hour, aisle, dept, count_bucket, positions)
         for transformer in self.transformer_blocks:
             x = transformer(x, mask)
         return x

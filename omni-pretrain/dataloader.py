@@ -61,7 +61,7 @@ class InstacartTrainDataset(data_utils.Dataset):
         labels = [-1] * (len(tranxs) + 1)
 
         # prepend dummy feature for user
-        tranxs = [{"product_id": user_id_token, "reordered": 0, "hour": 0, "aisle": 0, "department": 0, "count": 0, "positions": 0}] + tranxs
+        tranxs = [{"product_id": user_id_token, "reordered": 0, "hour": 0, "aisle": 0, "department": 0, "count_bucket": 0, "positions": 0}] + tranxs
 
         num_masked = 0
         num_to_predict = min(self.max_predictions_per_seq, max(1, int(len(tranxs) * self.args.masked_lm_prob)))
@@ -78,7 +78,7 @@ class InstacartTrainDataset(data_utils.Dataset):
         hour = [t["hour"]+1 for t in tranxs]
         aisle = [t["aisle"] for t in tranxs]
         dept = [t["department"] for t in tranxs]
-        count = [t["count"] for t in tranxs]
+        count_bucket = [t["count_bucket"] for t in tranxs]
         input_mask = [1] * len(input_ids)
         positions = list(range(len(input_ids)))
 
@@ -88,7 +88,7 @@ class InstacartTrainDataset(data_utils.Dataset):
 
         # padding
         pad_len = self.args.max_seq_length - len(input_ids)
-        for feat in [input_ids, reordered, hour, aisle, dept, count, input_mask, labels, positions]:
+        for feat in [input_ids, reordered, hour, aisle, dept, count_bucket, input_mask, labels, positions]:
             if feat is labels:
                 feat += [-1] * pad_len
             else:
@@ -101,7 +101,7 @@ class InstacartTrainDataset(data_utils.Dataset):
             torch.LongTensor(hour),
             torch.LongTensor(aisle),
             torch.LongTensor(dept),
-            torch.LongTensor(count),
+            torch.LongTensor(count_bucket),
             torch.LongTensor(input_mask),
             torch.LongTensor(labels),
             torch.LongTensor(positions)
@@ -124,19 +124,19 @@ class InstacartEvalDataset(data_utils.Dataset):
         user_id_token = self.vocab.convert_tokens_to_ids([user_token])[0]
 
         # prepend user token
-        tranxs = [{"product_id": user_id_token, "reordered": 0, "hour": 0, "aisle": 0, "department": 0, "count": 0}] + tranxs
+        tranxs = [{"product_id": user_id_token, "reordered": 0, "hour": 0, "aisle": 0, "department": 0, "count_bucket": 0}] + tranxs
 
         input_ids = [t["product_id"] for t in tranxs]
         reordered = [t["reordered"]+1 for t in tranxs]
         hour = [t["hour"]+1 for t in tranxs]
         aisle = [t["aisle"] for t in tranxs]
         dept = [t["department"] for t in tranxs]
-        count = [t["count"] for t in tranxs]
+        count_bucket = [t["count_bucket"] for t in tranxs]
         input_mask = [1] * len(input_ids)
         positions = list(range(len(input_ids)))
 
         pad_len = self.args.max_seq_length - len(input_ids)
-        for feat in [input_ids, reordered, hour, aisle, dept, count, input_mask, positions]:
+        for feat in [input_ids, reordered, hour, aisle, dept, count_bucket, input_mask, positions]:
             feat += [0] * pad_len
 
         return (
@@ -146,7 +146,7 @@ class InstacartEvalDataset(data_utils.Dataset):
             torch.LongTensor(hour),
             torch.LongTensor(aisle),
             torch.LongTensor(dept),
-            torch.LongTensor(count),
+            torch.LongTensor(count_bucket),
             torch.LongTensor(input_mask),
             torch.LongTensor(positions)
         )
