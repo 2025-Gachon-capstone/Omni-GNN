@@ -79,8 +79,8 @@ class InstacartTrainDataset(data_utils.Dataset):
         aisle = [t["aisle"] for t in tranxs]
         dept = [t["department"] for t in tranxs]
         count_bucket = [t["count_bucket"] for t in tranxs]
-        input_mask = [1] * len(input_ids)
         positions = list(range(len(input_ids)))
+        input_mask = [1] * len(input_ids)
 
         reordered_tensor = torch.LongTensor(reordered)
         if reordered_tensor.min() < 0 or reordered_tensor.max() > 2:
@@ -94,18 +94,18 @@ class InstacartTrainDataset(data_utils.Dataset):
             else:
                 feat += [0] * pad_len
 
-        return (
-            torch.LongTensor([user_id]),
-            torch.LongTensor(input_ids),
-            torch.LongTensor(reordered),
-            torch.LongTensor(hour),
-            torch.LongTensor(aisle),
-            torch.LongTensor(dept),
-            torch.LongTensor(count_bucket),
-            torch.LongTensor(input_mask),
-            torch.LongTensor(labels),
-            torch.LongTensor(positions)
-        )
+        return {
+            "user_id": torch.LongTensor([user_id]),
+            "input_ids": torch.LongTensor(input_ids),
+            "reordered": torch.LongTensor(reordered),
+            "hour": torch.LongTensor(reordered),
+            "aisle": torch.LongTensor(aisle),
+            "dept": torch.LongTensor(dept),
+            "count_bucket": torch.LongTensor(count_bucket),
+            "positions": torch.LongTensor(positions),
+            "input_mask": torch.LongTensor(input_mask),
+            "labels": torch.LongTensor(labels)
+        }
 
 
 class InstacartEvalDataset(data_utils.Dataset):
@@ -132,21 +132,21 @@ class InstacartEvalDataset(data_utils.Dataset):
         aisle = [t["aisle"] for t in tranxs]
         dept = [t["department"] for t in tranxs]
         count_bucket = [t["count_bucket"] for t in tranxs]
-        input_mask = [1] * len(input_ids)
         positions = list(range(len(input_ids)))
+        input_mask = [1] * len(input_ids)
 
         pad_len = self.args.max_seq_length - len(input_ids)
         for feat in [input_ids, reordered, hour, aisle, dept, count_bucket, input_mask, positions]:
             feat += [0] * pad_len
 
-        return (
-            torch.LongTensor([user_id]),
-            torch.LongTensor(input_ids),
-            torch.LongTensor(reordered),
-            torch.LongTensor(hour),
-            torch.LongTensor(aisle),
-            torch.LongTensor(dept),
-            torch.LongTensor(count_bucket),
-            torch.LongTensor(input_mask),
-            torch.LongTensor(positions)
-        )
+        return {
+                "user_id": torch.LongTensor([user_id]),
+                "input_ids": torch.LongTensor(input_ids),
+                "reordered": torch.LongTensor(reordered),
+                "hour": torch.LongTensor(reordered),
+                "aisle": torch.LongTensor(aisle),
+                "dept": torch.LongTensor(dept),
+                "count_bucket": torch.LongTensor(count_bucket),
+                "positions": torch.LongTensor(positions),
+                "input_mask": torch.LongTensor(input_mask),
+            }

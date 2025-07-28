@@ -32,8 +32,15 @@ class InstacartTrainer(nn.Module):
             raise ValueError("Please select correct negative sampling strategy: uniform, zip, freq.")
 
     def calculate_loss(self, batch):
-        _, input_ids, reordered, hour, aisle, dept, count_bucket, input_mask, labels, positions = batch
-        input_ids, reordered, hour, aisle, dept, count_bucket, input_mask, labels, positions = [x.to(self.device) for x in (input_ids, reordered, hour, aisle, dept, count_bucket, input_mask, labels, positions)]
+        input_ids = batch["input_ids"].to(self.device)
+        reordered = batch["reordered"].to(self.device)
+        hour = batch["hour"].to(self.device)
+        aisle = batch["aisle"].to(self.device)
+        dept = batch["dept"].to(self.device)
+        count_bucket = batch["count_bucket"].to(self.device)
+        positions = batch["positions"].to(self.device)
+        # input_mask = batch["input_mask"].to(self.device)
+        labels = batch["labels"].to(self.device)
 
         h = self.model(input_ids, reordered, hour, aisle, dept, count_bucket, positions)
         input_tensor = self.dense(h)
@@ -60,8 +67,6 @@ class InstacartTrainer(nn.Module):
 
         # 임베딩
         neg_embed = self.model.embedding.token_embed(neg_embed_ids)
-
-
 
         pos_logits = torch.sum(input_tensor * pos_embed, dim=-1).unsqueeze(-1)
         neg_logits = torch.matmul(input_tensor, neg_embed.t())
@@ -128,3 +133,39 @@ class InstacartTrainer(nn.Module):
             (self.args.num_train_steps - step) / max(1, self.args.num_train_steps - self.args.num_warmup_steps)
         )
         return optimizer, scheduler
+    
+    def infer_embedding(self):
+        self.model.eval()
+        user_to_embedding = {}
+
+        with torch.no_grad():
+            for batch in tqdm(self.data_loader, desc="Inferring embeddings"):
+                user_ids = batch["user_id"].to(self.device)  # ✅ 여기가 빠졌어요!
+                input_ids = batch["input_ids"].to(self.device)
+                reordered = batch["reordered"].to(self.device)
+                hour = batch["hour"].to(self.device)
+                aisle = batch["aisle"].to(self.device)
+                dept = batch["dept"].to(self.device)
+                count_bucket = batch["count_bucket"].to(self.device)
+                positions = batch["positions"].to(self.device)
+
+                h = self.model(input_ids, reordered, hour, aisle, dept, count_bucket, positions)
+                cls_embedding = h[:, 0, :]  # B x H
+
+                for uid, emb in zip(user_ids.tolist(), cls_embedding):
+                    if uid not in user_to_embedding:
+                        user_to_embedding[uid] = [emb.unsqueeze(0)]
+                    else:
+                        user_to_embedding[uid].append(emb.unsqueeze(0))
+
+        # 사용자 단위 평균 벡터 생성
+        user_ids = []
+        embeddings = []
+        for uid, embed_list in user_to_embedding.items():
+            user_ids.append(uid)
+            mean_embedding = torch.cat(embed_list, dim=0).mean(dim=0)
+            embeddings.append(mean_embedding.unsqueeze(0))
+
+        final_embeddings = torch.cat(embeddings, dim=0).cpu().numpy()
+        return user_ids, final_embeddings
+
