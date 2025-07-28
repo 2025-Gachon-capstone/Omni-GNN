@@ -87,6 +87,11 @@ class InstacartTrainer(nn.Module):
                 self.best_loss = epoch_loss
                 self.save_model(epoch + 1, self.args.ckpt_dir, epoch_loss)
 
+    def load(self, ckpt_path):
+        state_dict = torch.load(ckpt_path, map_location=self.device)
+        self.model.load_state_dict(state_dict)
+        print(f"Checkpoint loaded from {ckpt_path}")
+
     def train_one_epoch(self, epoch, accum_step):
         self.model.train()
         total_loss = 0.0
@@ -152,7 +157,9 @@ class InstacartTrainer(nn.Module):
                 h = self.model(input_ids, reordered, hour, aisle, dept, count_bucket, positions)
                 cls_embedding = h[:, 0, :]  # B x H
 
+                user_ids = batch["user_id"].squeeze().to(self.device)  # shape: (B)
                 for uid, emb in zip(user_ids.tolist(), cls_embedding):
+                    
                     if uid not in user_to_embedding:
                         user_to_embedding[uid] = [emb.unsqueeze(0)]
                     else:

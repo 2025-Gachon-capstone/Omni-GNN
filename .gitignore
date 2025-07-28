@@ -18,5 +18,5 @@ data/tornado_trans_out_removed.csv
 ./data/*
 ./src/*
 ./outputs/*
-
+**/*.pth
 data/*
