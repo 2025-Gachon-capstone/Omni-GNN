@@ -51,7 +51,7 @@ def set_template(args):
     args.initializer_range = 0.02
     args.num_hidden_layers = 8
     args.num_attention_heads = 2
-    args.product_size = 49662
+    args.product_size = 50815
     args.user_size = 204808
     args.vocab_size = args.product_size + args.user_size + 3 # product_id 49685개 + 스페셜 토큰 3개 + user: 204808
 

@@ -15,8 +15,7 @@ data/phisher_transaction_out.csv
 data/tornado_trans_in_removed.csv
 data/tornado_trans_out_removed.csv
 **/__pycache__/*
-./data/*
+**.csv
 ./src/*
-./outputs/*
+outputs/*
 **/*.pth
-data/*
