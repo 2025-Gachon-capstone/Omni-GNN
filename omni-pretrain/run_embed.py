@@ -10,7 +10,7 @@ def infer_embed():
 
     # prepare dataset
     print("===========Load Sequence===========")
-    with open(os.path.join(args.data_dir, f"user2seq_instacart_{args.bizdate}.pkl"), "rb") as f:
+    with open(os.path.join(args.data_dir, f"dup/train_seq_{args.bizdate}.pkl"), "rb") as f:
         user2seq = pkl.load(f)
 
     # load vocab

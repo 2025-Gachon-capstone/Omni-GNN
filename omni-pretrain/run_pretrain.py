@@ -11,7 +11,7 @@ def train():
     # prepare dataset
     vocab = FreqVocab()
     print("===========Load Sequence===========")
-    with open(os.path.join(args.data_dir, f"train_seq_{args.bizdate}.pkl"), "rb") as f:
+    with open(os.path.join(args.data_dir, f"dup/train_seq_{args.bizdate}.pkl"), "rb") as f:
         user2seq = pkl.load(f)
 
     print("number of target users:", len(user2seq))

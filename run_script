@@ -5,6 +5,6 @@ salloc  -A gts-ll72 -qembers -N1 --gres=gpu:A100:1 --ntasks-per-node=4 -t8:00:00
 
 
 python run_pretrain.py --bizdate=0000 --num_epochs=100
-python run_embed.py --bizdate=0000 --init_checkpoint=./cpkt_local/epoch_22.pth
+python run_embed.py --bizdate=0000 --init_checkpoint=./cpkt_local/epoch_8.pth
 
 # CUDA_LAUNCH_BLOCKING=1 python run_pretrain.py --bizdate=0000
