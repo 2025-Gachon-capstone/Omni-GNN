@@ -143,7 +143,7 @@ class InstacartEvalDataset(data_utils.Dataset):
                 "user_id": torch.LongTensor([user_id]),
                 "input_ids": torch.LongTensor(input_ids),
                 "reordered": torch.LongTensor(reordered),
-                "hour": torch.LongTensor(reordered),
+                "hour": torch.LongTensor(hour),
                 "aisle": torch.LongTensor(aisle),
                 "dept": torch.LongTensor(dept),
                 "count_bucket": torch.LongTensor(count_bucket),
