@@ -1,0 +1,33 @@
+{
+  "summary": [
+    {
+      "model": "XGB_orders",
+      "macro_F1": 0.7518210317695586,
+      "orders_used": 122607,
+      "coverage": 1.0,
+      "AUC": 0.7294198731653776,
+      "Logloss": 0.5935587897411954
+    },
+    {
+      "model": "BERT_orders",
+      "macro_F1": 0.7475841673141977,
+      "orders_used": 122594,
+      "coverage": 0.9998939701648356,
+      "AUC": null,
+      "Logloss": null
+    }
+  ],
+  "notes": {
+    "gt_orders": 122607,
+    "orders_common_both": 122594,
+    "xgb_id_col": "order_id",
+    "xgb_products_col": "products",
+    "bert_id_col": "user_id",
+    "bert_products_col": "last_product_ids",
+    "filtered_bert_on_eval_set_train": "yes",
+    "master_path": "/content/drive/MyDrive/data/instacart/master_dataset_with_roles_final.csv",
+    "xgb_orders_path": "/content/drive/MyDrive/data/instacart/test_predictions_orders_threshold_0.32.csv",
+    "bert_path": "/content/drive/MyDrive/data/instacart/address(in).csv",
+    "xgb_detail_path": "/content/drive/MyDrive/data/instacart/test_predictions_detailed.csv"
+  }
+}
